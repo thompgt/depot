@@ -13,6 +13,7 @@ repository.workspace = true
 libm = "0.2"
 
 [dev-dependencies]
+libm = "0.2"
 proptest = "1"
 
 [lints]
