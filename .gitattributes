@@ -1,0 +1,15 @@
+# The simulation stack builds and runs in Linux containers. A CRLF line ending in a
+# shell script or a ROS launch file produces a "bad interpreter" error that reads like
+# a missing binary, so line endings are normalised to LF in the repository and on
+# checkout regardless of host OS.
+* text=auto eol=lf
+
+# Binary assets: never touched.
+*.png binary
+*.jpg binary
+*.onnx binary
+*.pt binary
+*.db3 binary
+*.bag binary
+*.stl binary
+*.dae binary
