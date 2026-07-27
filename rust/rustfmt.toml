@@ -1,0 +1,5 @@
+max_width = 100
+# Keep short constructs on one line. In this crate the units of meaning are small --
+# a clamp, a guard, a two-field struct -- and exploding them across four lines each
+# makes the arbitration order harder to read, not easier.
+use_small_heuristics = "Max"

@@ -1,7 +1,7 @@
 //! Shared fixtures for the safety-core test suites.
 #![allow(dead_code)]
 
-use depot_safety_core::{Micros, Scan, SafetyConfig};
+use depot_safety_core::{Micros, SafetyConfig, Scan};
 
 /// Rays in the synthetic sensor: 270° at 1°, the shape of a typical AMR safety lidar.
 pub const RAYS: usize = 271;

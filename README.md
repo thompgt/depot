@@ -52,6 +52,19 @@ without being dangerous.
 
 A latency budget you don't measure is a wish, so these are asserted in tests.
 
+Measured for `depot-safety-core` at its worst-case 1081-ray scan, release build:
+
+| | mean | p50 | p99 | budget |
+|---|---|---|---|---|
+| arbitration cycle | 5.1 µs | 4.6 µs | 8.5 µs | 10,000 µs |
+
+Three orders of magnitude of headroom, which is the point: the arbitration algorithm
+should be irrelevant to the deadline, leaving the entire budget to scheduling, transport
+and the operating system — the parts that are actually hard to control. The observed
+*maximum* on a desktop OS is milliseconds and is pure scheduler preemption; the test
+prints it rather than asserting on it, and eliminating it is a real-time configuration
+problem rather than an algorithmic one.
+
 ---
 
 ## Design position: Python never enters a control loop
@@ -92,7 +105,7 @@ Under construction. See [`docs/WORKPLAN.md`](docs/WORKPLAN.md) for the phase pla
 the done-when criteria for each.
 
 - [x] Phase 0 — environment scaffolding
-- [ ] Phase 1 — Rust safety layer
+- [ ] Phase 1 — Rust safety layer *(core done and proven; ROS 2 node outstanding)*
 - [ ] Phase 2 — C++ navigation, single robot
 - [ ] Phase 3 — Python simulation harness
 - [ ] Phase 4 — Java fleet service, single robot
@@ -112,5 +125,14 @@ docker compose -f infra/compose.yaml run --rm dev
 The Rust safety core has no ROS dependency and builds anywhere:
 
 ```bash
-cd rust && cargo test
+cd rust
+cargo test --all-targets                       # 47 tests: unit, behavioural, property
+cargo test --release --test latency -- --nocapture   # the 10 ms budget, measured
+cargo test --release --test no_alloc           # the zero-allocation guarantee
+cargo build -p depot-safety-core --target thumbv7em-none-eabihf   # still bare-metal
 ```
+
+That last line is a standing check rather than a demonstration. The core is `no_std` so
+that the identical arbitration logic could run on a safety MCU beside the motor
+controller, and the surest way to lose that property is to let one convenient `String`
+in an error path go unnoticed. CI cross-compiles it on every push.

@@ -18,7 +18,14 @@
 /// not something the robot is about to drive into.
 #[must_use]
 pub fn forward_rect_boundary(length: f32, half_width: f32, cos_t: f32, sin_t: f32) -> Option<f32> {
-    if !(cos_t > 0.0) || length <= 0.0 || half_width <= 0.0 {
+    // NaN is checked explicitly rather than relying on a negated comparison: every
+    // ordering test against NaN is false, so `!(cos_t > 0.0)` and `cos_t <= 0.0` differ
+    // exactly in the case that matters. A NaN bearing must mean "no field here", not
+    // "field of unknown size".
+    if cos_t.is_nan() || cos_t <= 0.0 {
+        return None;
+    }
+    if !length.is_finite() || length <= 0.0 || !half_width.is_finite() || half_width <= 0.0 {
         return None;
     }
     // Range at which the ray crosses the plane x = length.

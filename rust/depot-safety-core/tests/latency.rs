@@ -18,11 +18,22 @@
 //! that has to be engineered away, and pretending not to see it here would be the
 //! wrong lesson.
 
+// Tests are held to the opposite lint standard from the library: a test that cannot
+// panic cannot fail.
+#![allow(
+    clippy::expect_used,
+    clippy::float_cmp,
+    clippy::indexing_slicing,
+    clippy::panic,
+    clippy::unwrap_used
+)]
 mod harness;
 
 use std::time::Instant;
 
-use depot_safety_core::{Arbiter, Command, Micros, Mode, SafetyConfig, Scan, Tick, Twist, MAX_RAYS};
+use depot_safety_core::{
+    Arbiter, Command, Micros, Mode, SafetyConfig, Scan, Tick, Twist, MAX_RAYS,
+};
 
 /// The hard budget from the architecture table.
 const BUDGET_US: u128 = 10_000;
@@ -111,8 +122,5 @@ fn a_full_rate_cycle_fits_inside_the_ten_millisecond_budget() {
         p99_us < BUDGET_US / 10,
         "p99 cycle {p99_us} us is uncomfortably close to the {BUDGET_US} us budget"
     );
-    assert!(
-        p999_us < BUDGET_US,
-        "p99.9 cycle {p999_us} us exceeds the {BUDGET_US} us budget"
-    );
+    assert!(p999_us < BUDGET_US, "p99.9 cycle {p999_us} us exceeds the {BUDGET_US} us budget");
 }

@@ -1,9 +1,18 @@
-﻿//! Property tests for the invariants the rest of the system is allowed to assume.
+//! Property tests for the invariants the rest of the system is allowed to assume.
 //!
 //! The behavioural suite checks that the layer does the right thing in scenarios we
 //! thought of. This suite checks that it cannot do the wrong thing in scenarios we
 //! did not.
 
+// Tests are held to the opposite lint standard from the library: a test that cannot
+// panic cannot fail.
+#![allow(
+    clippy::expect_used,
+    clippy::float_cmp,
+    clippy::indexing_slicing,
+    clippy::panic,
+    clippy::unwrap_used
+)]
 mod harness;
 
 use depot_safety_core::{
@@ -58,15 +67,17 @@ fn any_step() -> impl Strategy<Value = Step> {
         prop_oneof![7 => Just(0u64), 3 => 0u64..400_000],
     )
         .prop_map(
-            |(ranges, cmd, estop, estop_reset, mode, (zl, za), scan_present, extra_delay_us)| Step {
-                ranges,
-                cmd,
-                estop,
-                estop_reset,
-                mode,
-                zone: ZoneLimits::new(zl, za),
-                scan_present,
-                extra_delay_us,
+            |(ranges, cmd, estop, estop_reset, mode, (zl, za), scan_present, extra_delay_us)| {
+                Step {
+                    ranges,
+                    cmd,
+                    estop,
+                    estop_reset,
+                    mode,
+                    zone: ZoneLimits::new(zl, za),
+                    scan_present,
+                    extra_delay_us,
+                }
             },
         )
 }
@@ -278,5 +289,3 @@ fn every_bearing_in_the_sensor_sweep_is_cached_exactly() {
         assert!(theta.is_finite());
     }
 }
-
-

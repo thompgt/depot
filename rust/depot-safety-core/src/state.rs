@@ -72,8 +72,7 @@ impl FieldStateMachine {
             return self.state;
         }
 
-        let observed =
-            if verdict.warning_breach { FieldState::Warning } else { FieldState::Clear };
+        let observed = if verdict.warning_breach { FieldState::Warning } else { FieldState::Clear };
 
         if self.state.is_stopped() {
             let since = *self.clear_since_us.get_or_insert(now_us);

@@ -15,7 +15,15 @@
 // to prove a property *about* that crate necessarily needs `unsafe`, so this test
 // target opts back in. It is the only place in the workspace that does.
 #![allow(unsafe_code)]
-
+// Tests are held to the opposite lint standard from the library: a test that cannot
+// panic cannot fail.
+#![allow(
+    clippy::expect_used,
+    clippy::float_cmp,
+    clippy::indexing_slicing,
+    clippy::panic,
+    clippy::unwrap_used
+)]
 mod harness;
 
 use std::alloc::{GlobalAlloc, Layout, System};

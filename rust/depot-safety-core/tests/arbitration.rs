@@ -2,6 +2,15 @@
 //! "done" for the Rust phase: drive at a wall at full speed and it stops itself; kill
 //! the planner mid-drive and it ramps to zero.
 
+// Tests are held to the opposite lint standard from the library: a test that cannot
+// panic cannot fail.
+#![allow(
+    clippy::expect_used,
+    clippy::float_cmp,
+    clippy::indexing_slicing,
+    clippy::panic,
+    clippy::unwrap_used
+)]
 mod harness;
 
 use depot_safety_core::{
@@ -67,9 +76,8 @@ fn it_reaches_full_speed_on_an_empty_floor() {
     let mut arbiter = Arbiter::new(config()).unwrap();
     let mut now = 0;
     for _ in 0..500 {
-        let tick = Tick::new(now)
-            .with_scan(scan_at(&ranges, now))
-            .with_cmd(Command::new(FULL_SPEED, now));
+        let tick =
+            Tick::new(now).with_scan(scan_at(&ranges, now)).with_cmd(Command::new(FULL_SPEED, now));
         arbiter.step(&tick);
         now += PERIOD_US;
     }
@@ -86,9 +94,8 @@ fn losing_the_planner_mid_drive_ramps_to_zero() {
 
     // Get up to speed.
     for _ in 0..400 {
-        let tick = Tick::new(now)
-            .with_scan(scan_at(&ranges, now))
-            .with_cmd(Command::new(FULL_SPEED, now));
+        let tick =
+            Tick::new(now).with_scan(scan_at(&ranges, now)).with_cmd(Command::new(FULL_SPEED, now));
         arbiter.step(&tick);
         now += PERIOD_US;
     }
@@ -112,9 +119,8 @@ fn losing_the_planner_mid_drive_ramps_to_zero() {
 
     let stopped_at = stopped_at.expect("must reach zero");
     // Budget: detect within the watchdog timeout, then brake at the configured rate.
-    let budget_us = cfg.watchdog_timeout_us
-        + (speed_at_failure / cfg.max_decel * 1e6) as u64
-        + 2 * PERIOD_US;
+    let budget_us =
+        cfg.watchdog_timeout_us + (speed_at_failure / cfg.max_decel * 1e6) as u64 + 2 * PERIOD_US;
     assert!(
         stopped_at - failure_us <= budget_us,
         "took {} us, budget {budget_us} us",
@@ -138,9 +144,8 @@ fn losing_the_lidar_mid_drive_stops_the_robot() {
     let mut arbiter = Arbiter::new(cfg).unwrap();
     let mut now = 0;
     for _ in 0..400 {
-        let tick = Tick::new(now)
-            .with_scan(scan_at(&ranges, now))
-            .with_cmd(Command::new(FULL_SPEED, now));
+        let tick =
+            Tick::new(now).with_scan(scan_at(&ranges, now)).with_cmd(Command::new(FULL_SPEED, now));
         arbiter.step(&tick);
         now += PERIOD_US;
     }

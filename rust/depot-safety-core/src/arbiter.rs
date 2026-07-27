@@ -254,8 +254,10 @@ impl Arbiter {
         // ---- Limits, weakest authority first ---------------------------------------
         let mut target = request.clamped(self.cfg.max_linear, self.cfg.max_angular);
 
-        let zoned = target.clamped(self.cfg.max_linear.min(tick.zone.max_linear),
-                                   self.cfg.max_angular.min(tick.zone.max_angular));
+        let zoned = target.clamped(
+            self.cfg.max_linear.min(tick.zone.max_linear),
+            self.cfg.max_angular.min(tick.zone.max_angular),
+        );
         if zoned != target {
             veto = veto.max(VetoReason::ZoneLimit);
             target = zoned;

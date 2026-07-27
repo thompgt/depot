@@ -38,6 +38,20 @@
 #![cfg_attr(not(test), no_std)]
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+// The library is held to no-panic, no-indexing, no-float-equality discipline because it
+// runs inside a 10 ms deadline on a machine that can hurt someone. Tests are held to
+// the opposite standard: a test that cannot panic cannot fail, and exact float equality
+// is precisely what the determinism claim requires.
+#![cfg_attr(
+    test,
+    allow(
+        clippy::expect_used,
+        clippy::float_cmp,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::unwrap_used
+    )
+)]
 
 pub mod arbiter;
 pub mod config;
