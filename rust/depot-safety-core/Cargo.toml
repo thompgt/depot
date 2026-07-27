@@ -1,0 +1,19 @@
+[package]
+name = "depot-safety-core"
+description = "Deterministic, no_std protective-field and velocity-arbitration core for the Depot AMR fleet"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Pure-Rust libm: identical results on every target, unlike compiler intrinsics
+# that may lower to platform-specific instructions. Determinism over speed.
+libm = "0.2"
+
+[dev-dependencies]
+proptest = "1"
+
+[lints]
+workspace = true

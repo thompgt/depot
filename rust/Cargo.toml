@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = ["depot-safety-core"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "Apache-2.0"
+repository = "https://github.com/tpequegnot/depot"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+float_cmp = "warn"
+indexing_slicing = "warn"
+panic = "warn"
+unwrap_used = "warn"
+expect_used = "warn"
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1
+overflow-checks = true
+debug = true

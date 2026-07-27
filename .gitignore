@@ -1,0 +1,40 @@
+# Rust
+target/
+**/*.rs.bk
+
+# C++ / colcon
+build/
+install/
+log/
+cpp/**/build/
+
+# Java
+java/**/target/
+.gradle/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# ML artifacts (weights are published, not committed)
+*.onnx
+*.pt
+*.ckpt
+
+# Simulation output
+sim/**/*.sdf.generated
+results/
+*.bag
+*.db3
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
