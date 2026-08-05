@@ -4,6 +4,15 @@ A four-language autonomous mobile robot system. Robots drive beneath mobile shel
 units, lift them, and deliver them to picking stations while sharing corridors with
 each other and with humans. Built and validated entirely in simulation.
 
+## Tech Stack
+
+![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
+![C++](https://img.shields.io/badge/C%2B%2B-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
+![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![ROS 2](https://img.shields.io/badge/ROS%202-22314E?style=for-the-badge&logo=ros&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+
 | Language | Package | Owns |
 |---|---|---|
 | Rust | `depot-safety` | Protective fields, velocity arbitration, watchdog |
