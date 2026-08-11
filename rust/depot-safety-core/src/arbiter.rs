@@ -32,16 +32,23 @@ pub enum VetoReason {
     DockingLimit = 2,
     /// Clamped because an obstacle is in the warning field.
     WarningClamp = 3,
+    /// Held to the speed the last scan was actually evaluated against.
+    ///
+    /// Between scans the previous verdict stands, but it was computed against a field
+    /// sized for the speed at that moment. Letting the request grow the field in the
+    /// meantime would test a bigger field with a smaller field's answer, so speed is
+    /// held where it was until a fresh scan arrives.
+    StaleVerdictHold = 4,
     /// The request contained a non-finite value and was discarded.
-    CommandInvalid = 4,
+    CommandInvalid = 5,
     /// No command has arrived within the watchdog timeout; ramping to zero.
-    Watchdog = 5,
+    Watchdog = 6,
     /// An obstacle is in the protective field.
-    ProtectiveStop = 6,
+    ProtectiveStop = 7,
     /// The scan is missing, stale, or malformed. The robot is blind, so it stops.
-    ScanStale = 7,
+    ScanStale = 8,
     /// The e-stop is asserted or latched.
-    EStop = 8,
+    EStop = 9,
 }
 
 /// One control cycle's worth of input.
@@ -159,6 +166,8 @@ pub struct Arbiter {
     estop_latched: bool,
     /// Why the most recent scan was rejected, cleared by the next usable one.
     last_scan_error: Option<ScanError>,
+    /// Speed the field was sized for when `last_verdict` was evaluated.
+    last_verdict_speed: f32,
 }
 
 impl Arbiter {
@@ -184,6 +193,7 @@ impl Arbiter {
             last_out: Twist::ZERO,
             estop_latched: false,
             last_scan_error: None,
+            last_verdict_speed: 0.0,
         })
     }
 
@@ -244,6 +254,9 @@ impl Arbiter {
                     self.last_verdict = evaluate(&self.geom, scan, &extent);
                     self.last_scan_us = Some(scan.stamp_us.min(tick.now_us));
                     self.last_scan_error = None;
+                    // The speed this verdict was actually evaluated against. Until a
+                    // fresh scan replaces it, the robot may not exceed it.
+                    self.last_verdict_speed = speed;
                 }
                 // The *cause* is kept, not just the fact. Telling the operator why the
                 // robot stopped is the point of this layer, and "the sensor published
@@ -255,9 +268,10 @@ impl Arbiter {
             }
         }
         // Between scans the previous verdict stands. It was computed against a field
-        // sized for the speed at that moment; sizing from the requested speed above
-        // keeps that conservative, and `scan_timeout_us` bounds how long a stale
-        // verdict can be trusted at all.
+        // sized for the speed at that moment, so the robot is held to that speed below
+        // rather than being allowed to grow the field the verdict no longer covers, and
+        // `scan_timeout_us` bounds how long a stale verdict can be trusted at all.
+        let verdict_is_stale = tick.scan.is_none() || blind;
         match self.last_scan_us {
             Some(t) if tick.now_us.saturating_sub(t) <= self.cfg.scan_timeout_us => {}
             _ => blind = true,
@@ -306,6 +320,18 @@ impl Arbiter {
             if warned != target {
                 veto = veto.max(VetoReason::WarningClamp);
                 target = warned;
+            }
+        }
+
+        // No fresh scan this cycle, so the verdict in hand was evaluated against a field
+        // sized for `last_verdict_speed`. Accelerating past that would enlarge the true
+        // stopping distance beyond the field anything was ever tested against — the one
+        // way a stale-but-still-valid verdict can become unsafe without going stale.
+        if verdict_is_stale {
+            let held = target.clamped(self.last_verdict_speed, self.cfg.max_angular);
+            if held != target {
+                veto = veto.max(VetoReason::StaleVerdictHold);
+                target = held;
             }
         }
 

@@ -193,8 +193,8 @@ discriminant overrides a smaller one, and the reported reason is always the high
 authority rule that bound this cycle:
 
 ```text
-None(0) < ZoneLimit(1) < DockingLimit(2) < WarningClamp(3) < CommandInvalid(4)
-        < Watchdog(5) < ProtectiveStop(6) < ScanStale(7) < EStop(8)
+None(0) < ZoneLimit(1) < DockingLimit(2) < WarningClamp(3) < StaleVerdictHold(4)
+        < CommandInvalid(5) < Watchdog(6) < ProtectiveStop(7) < ScanStale(8) < EStop(9)
 ```
 
 This is not decoration. When a robot stops mid-aisle, the operator needs to know whether
@@ -221,7 +221,7 @@ depot/
 │       └── tests/
 │           ├── harness/mod.rs       synthetic sensor: empty floor, wall, shelf legs
 │           ├── arbitration.rs       behavioural scenarios (15)
-│           ├── properties.rs        proptest invariants (8)
+│           ├── properties.rs        proptest invariants (9)
 │           ├── latency.rs           the 10 ms budget, asserted (1)
 │           └── no_alloc.rs          counting allocator, zero heap traffic (1)
 ├── docs/WORKPLAN.md                 13 phases, each with an explicit done-when
@@ -254,9 +254,11 @@ amount of arithmetic, then returns a `Decision`.
    cache only if the sensor geometry changed, then `evaluate` tests every ray against both
    fields in one pass. Non-finite ranges and returns outside `[range_min, range_max]` are
    no-returns, excluded explicitly — a NaN compared with `<` is quietly false and would
-   otherwise read as "nothing there". Between scans the previous verdict stands; past
-   `scan_timeout_us` the robot is *blind*, and blindness is a protective breach, because
-   absence of evidence is not evidence of a clear floor.
+   otherwise read as "nothing there". Between scans the previous verdict stands, but only
+   at the speed it was evaluated for: a verdict computed against a field sized for 0.3 m/s
+   says nothing about the field at 0.6 m/s, so speed is pinned (`StaleVerdictHold`) until a
+   fresh scan arrives. Past `scan_timeout_us` the robot is *blind*, and blindness is a
+   protective breach, because absence of evidence is not evidence of a clear floor.
 6. **State machine.** A breach latches `ProtectiveStop` on the first cycle it is seen, with
    no filtering or confirmation. Release requires the field to have been continuously clear
    for `clear_hold_us`; one bad cycle restarts the timer. The latch records its `StopCause`,
@@ -304,7 +306,7 @@ is moving eventually *will* be.
 All commands run from `rust/`.
 
 ```bash
-# Everything, optimised: 52 tests (27 unit, 15 behavioural, 8 property,
+# Everything, optimised: 53 tests (27 unit, 15 behavioural, 9 property,
 # 1 latency, 1 allocation guard).
 cargo test --release --all-targets
 

@@ -276,6 +276,49 @@ proptest! {
     }
 }
 
+proptest! {
+    #![proptest_config(ProptestConfig { cases: 64, ..ProptestConfig::default() })]
+
+    /// A verdict may not be reused against a field the request has since grown.
+    ///
+    /// The window is real: `scan_timeout_us` is 200 ms and the ramp is 0.8 m/s², so a
+    /// command stepping up between scans could add 0.16 m/s — and the breach test in
+    /// hand was computed for the *old*, shorter field. Speed is therefore pinned to
+    /// whatever the last evaluated scan covered until a fresh one arrives.
+    #[test]
+    fn a_stale_verdict_never_permits_more_speed_than_it_was_evaluated_for(
+        cruise in 0.05_f32..0.9,
+        gap_cycles in 1_usize..20,
+    ) {
+        let cfg = config();
+        let ranges = [RANGE_MAX; RAYS];
+        let mut arbiter = Arbiter::new(cfg).unwrap();
+        let mut now: Micros = 0;
+
+        // Settle at the cruise speed with a healthy scan stream.
+        for _ in 0..600 {
+            let tick = Tick::new(now)
+                .with_scan(scan_at(&ranges, now))
+                .with_cmd(Command::new(Twist::new(cruise, 0.0), now));
+            arbiter.step(&tick);
+            now += PERIOD_US;
+        }
+        let evaluated_for = arbiter.last_output().linear.abs().max(cruise);
+
+        // Scans stop arriving and the planner floors it. Inside `scan_timeout_us` the
+        // old verdict still stands, so the robot keeps going — but no faster.
+        for _ in 0..gap_cycles.min((cfg.scan_timeout_us / PERIOD_US) as usize) {
+            let d = arbiter.step(&Tick::new(now).with_cmd(Command::new(Twist::new(1.2, 0.0), now)));
+            prop_assert!(
+                d.twist.linear.abs() <= evaluated_for + 1e-5,
+                "grew to {} against a verdict evaluated for {evaluated_for}",
+                d.twist.linear
+            );
+            now += PERIOD_US;
+        }
+    }
+}
+
 /// Property expressed over the scan-geometry cache rather than the arbiter.
 #[test]
 fn every_bearing_in_the_sensor_sweep_is_cached_exactly() {
