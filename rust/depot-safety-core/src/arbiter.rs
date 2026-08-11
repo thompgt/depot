@@ -7,7 +7,7 @@
 use crate::config::{ConfigError, SafetyConfig};
 use crate::field::FieldExtent;
 use crate::scan::{evaluate, ScanError, ScanGeometry, ScanVerdict};
-use crate::state::{FieldState, FieldStateMachine};
+use crate::state::{FieldState, FieldStateMachine, StopCause};
 use crate::types::{clamp_sym, Command, Micros, Mode, Scan, Twist, ZoneLimits};
 
 /// Largest timestep the ramp limiter will honour, seconds.
@@ -272,9 +272,11 @@ impl Arbiter {
         // so the hold only begins on the cycle the operator acknowledges, and re-arming
         // is then governed by the ordinary `clear_hold_us` rather than resuming full
         // speed on the very next cycle.
-        let mut state = self.field.update(&self.last_verdict, tick.now_us, self.cfg.clear_hold_us);
+        let cause = if blind { StopCause::Blind } else { StopCause::Obstacle };
+        let mut state =
+            self.field.update(&self.last_verdict, cause, tick.now_us, self.cfg.clear_hold_us);
         if self.estop_latched {
-            self.field.force_stop();
+            self.field.force_stop(StopCause::EStop);
             state = self.field.state();
         }
 
@@ -322,7 +324,15 @@ impl Arbiter {
 
         let hard_stop = state.is_stopped() || self.estop_latched;
         if state.is_stopped() {
-            veto = veto.max(if blind { VetoReason::ScanStale } else { VetoReason::ProtectiveStop });
+            // The *latched* cause, not this cycle's flags. A stop lasts at least
+            // `clear_hold_us`, and the scan that caused it may well have arrived and
+            // been fine since; reporting the current cycle would blame the wrong thing
+            // for most of the stop's duration.
+            veto = veto.max(match self.field.cause() {
+                Some(StopCause::Blind) => VetoReason::ScanStale,
+                Some(StopCause::EStop) => VetoReason::EStop,
+                _ => VetoReason::ProtectiveStop,
+            });
         }
         if self.estop_latched {
             veto = VetoReason::EStop;

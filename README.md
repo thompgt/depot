@@ -183,6 +183,7 @@ sideways or backwards and cannot enter the field, which is what makes it forward
 | `ScanVerdict` | `scan` | Breach flags, hit counts, closest return; `blind()` is the fail-safe value |
 | `ScanError` | `scan` | Why a scan was rejected: empty, oversized, bad `angle_min`/increment |
 | `FieldState` | `state` | `Clear` / `Warning` / `ProtectiveStop` |
+| `StopCause` | `state` | What latched the current stop — `Obstacle` / `Blind` / `EStop` — held for its whole duration |
 | `Tick<'a>` | `arbiter` | One cycle of input: time, optional command, optional scan, e-stop, mode, zone |
 | `Decision` | `arbiter` | Output twist, state, veto reason, extent, closest range, latch flag, last `ScanError` |
 | `Arbiter` | `arbiter` | The core itself: config + geometry cache + state machine + ramp/watchdog history (~8.7 KB, all inline) |
@@ -219,7 +220,7 @@ depot/
 │       │   └── arbiter.rs           Tick → Decision: the single point of authority
 │       └── tests/
 │           ├── harness/mod.rs       synthetic sensor: empty floor, wall, shelf legs
-│           ├── arbitration.rs       behavioural scenarios (14)
+│           ├── arbitration.rs       behavioural scenarios (15)
 │           ├── properties.rs        proptest invariants (8)
 │           ├── latency.rs           the 10 ms budget, asserted (1)
 │           └── no_alloc.rs          counting allocator, zero heap traffic (1)
@@ -258,7 +259,10 @@ amount of arithmetic, then returns a `Decision`.
    absence of evidence is not evidence of a clear floor.
 6. **State machine.** A breach latches `ProtectiveStop` on the first cycle it is seen, with
    no filtering or confirmation. Release requires the field to have been continuously clear
-   for `clear_hold_us`; one bad cycle restarts the timer.
+   for `clear_hold_us`; one bad cycle restarts the timer. The latch records its `StopCause`,
+   which is what gets reported for the whole hold — a stop caused by one blind cycle keeps
+   reading `ScanStale` even after clear scans resume, rather than being blamed on an
+   obstacle nobody ever saw.
 7. **Limits, weakest authority first.** Vehicle ceilings → zone limits → docking ceiling →
    warning-field clamp. Each records its `VetoReason` only if it actually changed the
    command. Zone limits are intersected with the configured maxima, so a misbehaving
@@ -300,7 +304,7 @@ is moving eventually *will* be.
 All commands run from `rust/`.
 
 ```bash
-# Everything, optimised: 50 tests (26 unit, 14 behavioural, 8 property,
+# Everything, optimised: 52 tests (27 unit, 15 behavioural, 8 property,
 # 1 latency, 1 allocation guard).
 cargo test --release --all-targets
 

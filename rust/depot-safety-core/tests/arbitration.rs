@@ -162,6 +162,39 @@ fn losing_the_lidar_mid_drive_stops_the_robot() {
 }
 
 #[test]
+fn a_stop_caused_by_blindness_is_not_blamed_on_a_phantom_obstacle() {
+    let ranges = empty_floor();
+    let cfg = config();
+    let mut arbiter = Arbiter::new(cfg).unwrap();
+    let mut now = 0;
+    for _ in 0..400 {
+        let tick =
+            Tick::new(now).with_scan(scan_at(&ranges, now)).with_cmd(Command::new(FULL_SPEED, now));
+        arbiter.step(&tick);
+        now += PERIOD_US;
+    }
+
+    // One long gap in the scan stream: the robot goes blind and latches a stop.
+    now += cfg.scan_timeout_us + PERIOD_US;
+    let d = arbiter.step(&Tick::new(now).with_cmd(Command::new(FULL_SPEED, now)));
+    assert_eq!(d.veto, VetoReason::ScanStale);
+
+    // Scans resume immediately and show a clear floor, but the stop holds. It must go
+    // on being reported as the sensor fault it was, not as an obstacle nobody ever saw.
+    let latched_at = now;
+    while now - latched_at < cfg.clear_hold_us {
+        now += PERIOD_US;
+        let d = arbiter.step(
+            &Tick::new(now)
+                .with_scan(scan_at(&ranges, now))
+                .with_cmd(Command::new(FULL_SPEED, now)),
+        );
+        assert_eq!(d.state, FieldState::ProtectiveStop);
+        assert_eq!(d.veto, VetoReason::ScanStale, "blamed on an obstacle that was never there");
+    }
+}
+
+#[test]
 fn a_misconfigured_lidar_is_distinguishable_from_a_silent_one() {
     let mut arbiter = Arbiter::new(config()).unwrap();
 
