@@ -9,6 +9,15 @@ rust-version = "1.75"
 license = "Apache-2.0"
 repository = "https://github.com/thompgt/depot"
 
+# Versions live here, not in the member manifests. The workspace is about to grow more
+# crates, and two of them disagreeing about which libm they compute stopping distances
+# with is the kind of drift that only shows up as a field length that is subtly wrong.
+[workspace.dependencies]
+# Pure-Rust libm: identical results on every target, unlike compiler intrinsics that may
+# lower to platform-specific instructions. Determinism over speed.
+libm = "0.2"
+proptest = "1"
+
 [workspace.lints.rust]
 # Denied rather than forbidden so the allocation-guard test can opt in: proving the
 # core never allocates requires a custom global allocator, which requires `unsafe`.

@@ -8,13 +8,12 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-# Pure-Rust libm: identical results on every target, unlike compiler intrinsics
-# that may lower to platform-specific instructions. Determinism over speed.
-libm = "0.2"
+libm.workspace = true
 
+# `libm` is deliberately absent here: a dev-dependency duplicating a dependency is a
+# second version waiting to happen, and the tests use the same one the library does.
 [dev-dependencies]
-libm = "0.2"
-proptest = "1"
+proptest.workspace = true
 
 [lints]
 workspace = true
