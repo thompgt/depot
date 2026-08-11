@@ -307,11 +307,12 @@ All commands run from `rust/`.
 
 ```bash
 # Everything, optimised: 53 tests (27 unit, 15 behavioural, 9 property,
-# 1 latency, 1 allocation guard).
+# 1 latency, 1 allocation guard). The latency test is `#[ignore]`d — it is only
+# meaningful optimised, so it is run explicitly rather than swept up by a debug run.
 cargo test --release --all-targets
 
 # The 10 ms budget, with the measured percentile table printed.
-cargo test --release --test latency -- --nocapture
+cargo test --release --test latency -- --ignored --nocapture
 
 # The zero-allocation guarantee: 4000 cycles through every branch, count must be 0.
 cargo test --release --test no_alloc
@@ -328,7 +329,8 @@ cargo build -p depot-safety-core --target thumbv7em-none-eabihf --release
 ```
 
 > Run the latency test in `--release`. A debug build is roughly forty times slower and will
-> fail the p99 assertion — which is the assertion doing its job, not a flaky test.
+> fail the p99 assertion — which is the assertion doing its job, not a flaky test. That is
+> why it carries `#[ignore]`: an unoptimised `--all-targets` run must not pick it up.
 
 ### Use it as a library
 

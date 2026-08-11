@@ -41,7 +41,7 @@ jobs:
         with:
           workspaces: rust
       - name: latency budget
-        run: cargo test --release --test latency -- --nocapture
+        run: cargo test --release --test latency -- --ignored --nocapture
       - name: allocation guard
         run: cargo test --release --test no_alloc
 

@@ -60,7 +60,17 @@ fn scan(ranges: &[f32], stamp_us: Micros) -> Scan<'_> {
     }
 }
 
+/// Ignored by default, because a debug build is roughly forty times slower and fails
+/// the p99 assertion on merit — this file's own header says the number is only
+/// meaningful optimised. `cargo test --all-targets` in the ordinary test job would
+/// otherwise run it unoptimised on a shared runner and red-line main for no reason.
+/// The budgets job runs it explicitly:
+///
+/// ```text
+/// cargo test --release --test latency -- --ignored --nocapture
+/// ```
 #[test]
+#[ignore = "meaningful only against an optimised build; run by the budgets job"]
 fn a_full_rate_cycle_fits_inside_the_ten_millisecond_budget() {
     let ranges = full_scan();
     let mut arbiter = Arbiter::new(SafetyConfig::default()).expect("valid config");
