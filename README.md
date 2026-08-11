@@ -291,7 +291,10 @@ never covered. The robot still stops for anything closer than the docking field.
 
 ### Prerequisites
 
-- A Rust toolchain (stable). The workspace declares `rust-version = "1.75"`.
+- A Rust toolchain (stable). The workspace declares `rust-version = "1.75"`, which CI
+  verifies against the *library* on a pinned 1.75 toolchain. The test suite needs a
+  current stable: `proptest`'s own dependency graph is far newer than the MSRV the
+  library offers its consumers.
 - Nothing else. `depot-safety-core` has one dependency (`libm`) plus `proptest` for tests,
   no ROS, no system libraries. It builds on any host.
 - For the bare-metal check only: `rustup target add thumbv7em-none-eabihf`.
@@ -352,9 +355,10 @@ never reads a clock, which is what makes a recorded run replayable bit-for-bit.
 ### CI
 
 [`.github/workflows/rust.yml`](.github/workflows/rust.yml) runs on any push touching
-`rust/**`, in three jobs: **test** (fmt, clippy with `-D warnings`, tests, doctests),
+`rust/**`, in four jobs: **test** (fmt, clippy with `-D warnings`, tests, doctests),
 **budgets** (latency and allocation guard, release only — both are meaningless against an
-unoptimised build), and **no_std** (the `thumbv7em-none-eabihf` cross-compile).
+unoptimised build), **msrv** (the declared 1.75 checked on a pinned 1.75 toolchain), and
+**no_std** (the `thumbv7em-none-eabihf` cross-compile).
 
 ---
 

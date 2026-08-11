@@ -45,6 +45,20 @@ jobs:
       - name: allocation guard
         run: cargo test --release --test no_alloc
 
+  # The declared MSRV is a promise to whoever links the library, so it is checked
+  # against the library rather than the test suite: the dev-dependency graph
+  # (proptest → getrandom) needs a far newer toolchain, and holding the tests to
+  # 1.75 would mean choosing a weaker property-testing library to say so.
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.75.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - run: cargo check -p depot-safety-core --lib
+
   # The core must keep building for a bare-metal target with no allocator at all.
   # This is the check that stops `std` creeping back in one convenience at a time.
   no_std:
