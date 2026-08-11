@@ -219,7 +219,7 @@ depot/
 │       │   └── arbiter.rs           Tick → Decision: the single point of authority
 │       └── tests/
 │           ├── harness/mod.rs       synthetic sensor: empty floor, wall, shelf legs
-│           ├── arbitration.rs       behavioural scenarios (12)
+│           ├── arbitration.rs       behavioural scenarios (13)
 │           ├── properties.rs        proptest invariants (8)
 │           ├── latency.rs           the 10 ms budget, asserted (1)
 │           └── no_alloc.rs          counting allocator, zero heap traffic (1)
@@ -298,7 +298,7 @@ is moving eventually *will* be.
 All commands run from `rust/`.
 
 ```bash
-# Everything, optimised: 48 tests (26 unit, 12 behavioural, 8 property,
+# Everything, optimised: 49 tests (26 unit, 13 behavioural, 8 property,
 # 1 latency, 1 allocation guard).
 cargo test --release --all-targets
 

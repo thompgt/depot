@@ -294,6 +294,51 @@ fn docking_tolerates_the_shelf_it_is_driving_under_but_still_limits_speed() {
         docking.twist.linear
     );
     assert!(docking.extent.protective_len > 0.0, "the field is narrowed, never disabled");
+    assert_eq!(docking.veto, VetoReason::DockingLimit, "the docking ceiling is what bound");
+}
+
+#[test]
+fn an_obstacle_in_the_warning_field_scales_speed_rather_than_stopping() {
+    let cfg = config();
+    // A request modest enough that its own protective field clears the wall, and a wall
+    // close enough to sit inside the warning field: the one band where speed is scaled
+    // rather than either allowed or refused.
+    let request = Twist::new(0.6, 0.0);
+    let ranges = wall_ahead(0.9);
+    let clamped = cfg.max_linear * cfg.warning_speed_frac;
+
+    let settle = |req: Twist| -> Decision {
+        let mut arbiter = Arbiter::new(cfg).unwrap();
+        let mut now = 0;
+        let mut last = None;
+        for _ in 0..300 {
+            let tick =
+                Tick::new(now).with_scan(scan_at(&ranges, now)).with_cmd(Command::new(req, now));
+            last = Some(arbiter.step(&tick));
+            now += PERIOD_US;
+        }
+        last.unwrap()
+    };
+
+    let d = settle(request);
+    assert_eq!(
+        d.state,
+        FieldState::Warning,
+        "the wall is in the warning field, not the protective"
+    );
+    assert_eq!(d.veto, VetoReason::WarningClamp);
+    assert!(
+        (d.twist.linear - clamped).abs() < 1e-3,
+        "expected the warning clamp at {clamped} m/s, got {}",
+        d.twist.linear
+    );
+
+    // The same wall, a request already under the clamp: nothing binds, so nothing is
+    // reported. A veto reason has to mean the rule actually changed the command.
+    let under = settle(Twist::new(clamped - 0.01, 0.0));
+    assert_eq!(under.state, FieldState::Warning);
+    assert_eq!(under.veto, VetoReason::None);
+    assert!((under.twist.linear - (clamped - 0.01)).abs() < 1e-3);
 }
 
 #[test]
@@ -339,6 +384,29 @@ fn a_garbled_command_is_discarded_rather_than_forwarded() {
     );
     assert!(d.twist.is_finite());
     assert_eq!(d.twist, Twist::ZERO);
+
+    // A healthy stream first, so the watchdog is satisfied and the discarded command is
+    // the only rule left to report. A NaN mid-stream must be named, not swallowed.
+    let mut arbiter = Arbiter::new(config()).unwrap();
+    let mut now = 0;
+    for _ in 0..50 {
+        let tick = Tick::new(now)
+            .with_scan(scan_at(&ranges, now))
+            .with_cmd(Command::new(Twist::new(0.4, 0.0), now));
+        arbiter.step(&tick);
+        now += PERIOD_US;
+    }
+    let d = arbiter.step(
+        &Tick::new(now)
+            .with_scan(scan_at(&ranges, now))
+            .with_cmd(Command::new(Twist::new(0.4, f32::INFINITY), now)),
+    );
+    assert_eq!(
+        d.veto,
+        VetoReason::CommandInvalid,
+        "the operator must be told the request was junk"
+    );
+    assert!(d.twist.is_finite());
 }
 
 #[test]
