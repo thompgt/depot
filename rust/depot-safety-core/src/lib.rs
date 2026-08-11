@@ -64,6 +64,6 @@ pub mod types;
 pub use arbiter::{Arbiter, Decision, Tick, VetoReason};
 pub use config::{ConfigError, DockingConfig, SafetyConfig};
 pub use field::FieldExtent;
-pub use scan::{ScanGeometry, ScanVerdict, MAX_RAYS};
+pub use scan::{ScanError, ScanGeometry, ScanVerdict, MAX_RAYS};
 pub use state::FieldState;
 pub use types::{Command, Micros, Mode, Scan, Twist, ZoneLimits};

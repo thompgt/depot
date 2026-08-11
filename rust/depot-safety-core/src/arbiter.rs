@@ -6,7 +6,7 @@
 
 use crate::config::{ConfigError, SafetyConfig};
 use crate::field::FieldExtent;
-use crate::scan::{evaluate, ScanGeometry, ScanVerdict};
+use crate::scan::{evaluate, ScanError, ScanGeometry, ScanVerdict};
 use crate::state::{FieldState, FieldStateMachine};
 use crate::types::{clamp_sym, Command, Micros, Mode, Scan, Twist, ZoneLimits};
 
@@ -130,6 +130,12 @@ pub struct Decision {
     pub closest_m: f32,
     /// Whether the e-stop is currently latched.
     pub estop_latched: bool,
+    /// Why the most recent scan was rejected, if one was.
+    ///
+    /// Cleared as soon as a usable scan arrives. A misconfigured lidar and a lidar that
+    /// has simply gone quiet both surface as [`VetoReason::ScanStale`], and the operator
+    /// needs to tell them apart: one is a wiring job and the other is a parameter file.
+    pub scan_error: Option<ScanError>,
 }
 
 /// The arbitration core.
@@ -151,6 +157,8 @@ pub struct Arbiter {
     last_tick_us: Option<Micros>,
     last_out: Twist,
     estop_latched: bool,
+    /// Why the most recent scan was rejected, cleared by the next usable one.
+    last_scan_error: Option<ScanError>,
 }
 
 impl Arbiter {
@@ -175,6 +183,7 @@ impl Arbiter {
             last_tick_us: None,
             last_out: Twist::ZERO,
             estop_latched: false,
+            last_scan_error: None,
         })
     }
 
@@ -230,11 +239,19 @@ impl Arbiter {
         // ---- Perception ------------------------------------------------------------
         let mut blind = false;
         if let Some(scan) = tick.scan.as_ref() {
-            if self.geom.ensure(scan).is_ok() {
-                self.last_verdict = evaluate(&self.geom, scan, &extent);
-                self.last_scan_us = Some(scan.stamp_us.min(tick.now_us));
-            } else {
-                blind = true;
+            match self.geom.ensure(scan) {
+                Ok(()) => {
+                    self.last_verdict = evaluate(&self.geom, scan, &extent);
+                    self.last_scan_us = Some(scan.stamp_us.min(tick.now_us));
+                    self.last_scan_error = None;
+                }
+                // The *cause* is kept, not just the fact. Telling the operator why the
+                // robot stopped is the point of this layer, and "the sensor published
+                // 4096 rays" and "the sensor stopped publishing" are different repairs.
+                Err(err) => {
+                    self.last_scan_error = Some(err);
+                    blind = true;
+                }
             }
         }
         // Between scans the previous verdict stands. It was computed against a field
@@ -339,6 +356,7 @@ impl Arbiter {
             extent,
             closest_m: self.last_verdict.closest_m,
             estop_latched: self.estop_latched,
+            scan_error: self.last_scan_error,
         }
     }
 

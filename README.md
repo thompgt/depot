@@ -181,9 +181,10 @@ sideways or backwards and cannot enter the field, which is what makes it forward
 | `FieldExtent` | `field` | The protective/warning lengths and half-width in force this cycle |
 | `ScanGeometry` | `scan` | Cached per-ray `sin`/`cos`, two `[f32; 1081]` arrays (~8.6 KB), rebuilt only on reconfiguration |
 | `ScanVerdict` | `scan` | Breach flags, hit counts, closest return; `blind()` is the fail-safe value |
+| `ScanError` | `scan` | Why a scan was rejected: empty, oversized, bad `angle_min`/increment |
 | `FieldState` | `state` | `Clear` / `Warning` / `ProtectiveStop` |
 | `Tick<'a>` | `arbiter` | One cycle of input: time, optional command, optional scan, e-stop, mode, zone |
-| `Decision` | `arbiter` | Output twist, state, veto reason, extent, closest range, latch flag |
+| `Decision` | `arbiter` | Output twist, state, veto reason, extent, closest range, latch flag, last `ScanError` |
 | `Arbiter` | `arbiter` | The core itself: config + geometry cache + state machine + ramp/watchdog history (~8.7 KB, all inline) |
 
 **Authority model — `VetoReason`** (`arbiter.rs`). A `#[repr(u8)]` ordered enum; a larger
@@ -218,7 +219,7 @@ depot/
 │       │   └── arbiter.rs           Tick → Decision: the single point of authority
 │       └── tests/
 │           ├── harness/mod.rs       synthetic sensor: empty floor, wall, shelf legs
-│           ├── arbitration.rs       behavioural scenarios (11)
+│           ├── arbitration.rs       behavioural scenarios (12)
 │           ├── properties.rs        proptest invariants (8)
 │           ├── latency.rs           the 10 ms budget, asserted (1)
 │           └── no_alloc.rs          counting allocator, zero heap traffic (1)
@@ -297,7 +298,7 @@ is moving eventually *will* be.
 All commands run from `rust/`.
 
 ```bash
-# Everything, optimised: 47 tests (26 unit, 11 behavioural, 8 property,
+# Everything, optimised: 48 tests (26 unit, 12 behavioural, 8 property,
 # 1 latency, 1 allocation guard).
 cargo test --release --all-targets
 

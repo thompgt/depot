@@ -14,7 +14,8 @@
 mod harness;
 
 use depot_safety_core::{
-    Arbiter, Command, Decision, FieldState, Micros, Mode, Tick, Twist, VetoReason, ZoneLimits,
+    Arbiter, Command, Decision, FieldState, Micros, Mode, ScanError, Tick, Twist, VetoReason,
+    ZoneLimits, MAX_RAYS,
 };
 use harness::{config, empty_floor, scan_at, shelf_legs, wall_ahead, PERIOD_US};
 
@@ -158,6 +159,28 @@ fn losing_the_lidar_mid_drive_stops_the_robot() {
     d = arbiter.step(&Tick::new(now).with_cmd(Command::new(FULL_SPEED, now)));
     assert_eq!(d.twist, Twist::ZERO, "a blind robot stops");
     assert_eq!(d.veto, VetoReason::ScanStale);
+}
+
+#[test]
+fn a_misconfigured_lidar_is_distinguishable_from_a_silent_one() {
+    let mut arbiter = Arbiter::new(config()).unwrap();
+
+    // A silent lidar: blind, but nothing was wrong with any scan.
+    let d = arbiter.step(&Tick::new(0).with_cmd(Command::new(FULL_SPEED, 0)));
+    assert_eq!(d.veto, VetoReason::ScanStale);
+    assert_eq!(d.scan_error, None);
+
+    // A lidar publishing more rays than the core will consider: same veto, and now the
+    // decision says which of the two it is.
+    let oversized = [4.0_f32; MAX_RAYS + 1];
+    let d = arbiter.step(&Tick::new(PERIOD_US).with_scan(scan_at(&oversized, PERIOD_US)));
+    assert_eq!(d.veto, VetoReason::ScanStale);
+    assert_eq!(d.scan_error, Some(ScanError::TooManyRays));
+
+    // A usable scan clears it.
+    let ranges = empty_floor();
+    let d = arbiter.step(&Tick::new(2 * PERIOD_US).with_scan(scan_at(&ranges, 2 * PERIOD_US)));
+    assert_eq!(d.scan_error, None);
 }
 
 #[test]
