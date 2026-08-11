@@ -36,10 +36,22 @@ struct Step {
     extra_delay_us: u64,
 }
 
+/// A uniform float in `[lo, hi]`, drawn through an integer.
+///
+/// Not `lo..hi`: proptest 1.11's uniform float sampler carries an internal debug
+/// assertion that trips at random (`float_samplers.rs`), which turns a run that found
+/// no counterexample into a red build. Stepping an integer costs nothing here — these
+/// properties are about arithmetic that has no interesting behaviour between adjacent
+/// ULPs — and it shrinks the same way.
+fn f32_in(lo: f32, hi: f32) -> impl Strategy<Value = f32> {
+    const STEPS: u32 = 10_000;
+    (0_u32..=STEPS).prop_map(move |n| lo + (hi - lo) * (n as f32 / STEPS as f32))
+}
+
 /// A range value, deliberately including the pathological ones.
 fn any_range() -> impl Strategy<Value = f32> {
     prop_oneof![
-        8 => RANGE_MIN..RANGE_MAX,
+        8 => f32_in(RANGE_MIN, RANGE_MAX),
         1 => Just(f32::NAN),
         1 => Just(f32::INFINITY),
         1 => Just(-1.0_f32),
@@ -49,7 +61,7 @@ fn any_range() -> impl Strategy<Value = f32> {
 
 fn any_twist() -> impl Strategy<Value = Twist> {
     prop_oneof![
-        8 => (-3.0_f32..3.0, -4.0_f32..4.0).prop_map(|(l, a)| Twist::new(l, a)),
+        8 => (f32_in(-3.0, 3.0), f32_in(-4.0, 4.0)).prop_map(|(l, a)| Twist::new(l, a)),
         1 => Just(Twist::new(f32::NAN, 0.0)),
         1 => Just(Twist::new(1e30, 1e30)),
     ]
@@ -62,7 +74,7 @@ fn any_step() -> impl Strategy<Value = Step> {
         any::<bool>(),
         any::<bool>(),
         prop_oneof![9 => Just(Mode::Normal), 1 => Just(Mode::Docking)],
-        (0.0_f32..2.0, 0.0_f32..3.0),
+        (f32_in(0.0, 2.0), f32_in(0.0, 3.0)),
         prop::bool::weighted(0.9),
         prop_oneof![7 => Just(0u64), 3 => 0u64..400_000],
     )
@@ -234,9 +246,9 @@ proptest! {
     #[test]
     fn a_closer_obstacle_never_yields_a_faster_command(
         steps in prop::collection::vec(any_step(), 1..20),
-        ranges in prop::collection::vec(RANGE_MIN..RANGE_MAX, RAYS),
-        shrink in prop::collection::vec(0.0_f32..1.0, RAYS),
-        request in (0.0_f32..1.2, -1.0_f32..1.0),
+        ranges in prop::collection::vec(f32_in(RANGE_MIN, RANGE_MAX), RAYS),
+        shrink in prop::collection::vec(f32_in(0.0, 1.0), RAYS),
+        request in (f32_in(0.0, 1.2), f32_in(-1.0, 1.0)),
     ) {
         // Warm both copies through an identical history, then diverge for one cycle.
         let mut arbiter = Arbiter::new(config()).unwrap();
@@ -287,7 +299,7 @@ proptest! {
     /// whatever the last evaluated scan covered until a fresh one arrives.
     #[test]
     fn a_stale_verdict_never_permits_more_speed_than_it_was_evaluated_for(
-        cruise in 0.05_f32..0.9,
+        cruise in f32_in(0.05, 0.9),
         gap_cycles in 1_usize..20,
     ) {
         let cfg = config();
