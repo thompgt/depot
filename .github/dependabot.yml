@@ -1,0 +1,22 @@
+version: 2
+
+updates:
+  # Cargo. The library has exactly one runtime dependency, so the noise is bounded and
+  # the interesting case is the one that matters: a `libm` release changing a result by
+  # one ULP changes a field length, and that should arrive as a reviewable pull request
+  # rather than as a silent bump the next time somebody regenerates the lock.
+  - package-ecosystem: cargo
+    directory: /rust
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        dependency-type: development
+
+  # Actions are pinned by major tag, which floats within a major and stops there. The
+  # cross-compile and cache actions are the ones that quietly rot.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

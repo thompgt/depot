@@ -1,0 +1,44 @@
+# Dependency hygiene for a crate that ends up between a planner and a quarter-tonne
+# machine. The runtime dependency list is one entry long on purpose; this file is what
+# keeps it that way and what turns an advisory into a failing build rather than a thing
+# somebody notices later.
+
+[graph]
+# Only the targets the crate is actually built for: the host CI runner and the
+# bare-metal board. Advisories against a Windows-only crate we never link are noise.
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "thumbv7em-none-eabihf" },
+]
+
+[advisories]
+version = 2
+yanked = "deny"
+
+[licenses]
+version = 2
+# Permissive only. Anything copyleft reaching a firmware image is a licensing problem
+# that has to be a decision, not a transitive surprise.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "MIT-0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.9
+
+[bans]
+# Warn, not deny: the duplicate today is two `getrandom` majors arriving through
+# proptest, which is a dev-dependency and never reaches the robot. Denying it would
+# mean pinning somebody else's dependency graph to keep our own build green.
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

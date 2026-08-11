@@ -55,6 +55,20 @@ jobs:
       - name: allocation guard
         run: cargo test --release --test no_alloc
 
+  # An advisory against a dependency of a safety layer should fail a build, not wait to
+  # be noticed. Also enforces the licence allow-list and that everything comes from
+  # crates.io — a git dependency slipping in is how a reviewed dependency stops being
+  # the one that ships.
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          # `rust/deny.toml` sits beside this manifest and is picked up from there.
+          manifest-path: rust/Cargo.toml
+          command: check advisories bans licenses sources
+
   # The declared MSRV is a promise to whoever links the library, so it is checked
   # against the library rather than the test suite: the dev-dependency graph
   # (proptest → getrandom) needs a far newer toolchain, and holding the tests to
