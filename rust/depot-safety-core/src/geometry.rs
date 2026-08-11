@@ -41,27 +41,29 @@ pub fn forward_rect_boundary(length: f32, half_width: f32, cos_t: f32, sin_t: f3
     }
 }
 
-/// True when a measured return at `(range, bearing)` lies strictly inside the
-/// rectangle described by `length` and `half_width`.
-#[must_use]
-pub fn inside_forward_rect(
-    range: f32,
-    cos_t: f32,
-    sin_t: f32,
-    length: f32,
-    half_width: f32,
-) -> bool {
-    match forward_rect_boundary(length, half_width, cos_t, sin_t) {
-        Some(boundary) => range < boundary,
-        None => false,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     const EPS: f32 = 1e-5;
+
+    /// True when a return at `(range, bearing)` lies strictly inside the rectangle.
+    ///
+    /// A test helper rather than public API: `evaluate` compares against the boundary
+    /// directly, and on a crate whose value is being small enough to audit, an export
+    /// nothing calls is surface for no return.
+    fn inside_forward_rect(
+        range: f32,
+        cos_t: f32,
+        sin_t: f32,
+        length: f32,
+        half_width: f32,
+    ) -> bool {
+        match forward_rect_boundary(length, half_width, cos_t, sin_t) {
+            Some(boundary) => range < boundary,
+            None => false,
+        }
+    }
 
     #[test]
     fn straight_ahead_boundary_is_the_field_length() {

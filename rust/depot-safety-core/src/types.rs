@@ -42,12 +42,6 @@ impl Twist {
             angular: clamp_sym(self.angular, max_angular),
         }
     }
-
-    /// Scales both components by `factor`.
-    #[must_use]
-    pub fn scaled(self, factor: f32) -> Self {
-        Self { linear: self.linear * factor, angular: self.angular * factor }
-    }
 }
 
 /// Clamps `value` into `[-limit, limit]`. `limit` is assumed non-negative.
