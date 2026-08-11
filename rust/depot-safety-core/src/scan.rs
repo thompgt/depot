@@ -150,8 +150,15 @@ pub struct ScanVerdict {
     /// A return lies inside the warning field.
     pub warning_breach: bool,
     /// Returns inside the protective field. Saturates at [`u16::MAX`].
+    ///
+    /// At least 1 whenever `protective_breach` is set on a verdict [`evaluate`] produced.
+    /// The one exception is [`ScanVerdict::blind`], which sets the breach flags with both
+    /// counters at zero: nothing was seen, which is precisely why the robot must stop.
+    /// Anything reading the counters to mean "how bad is it" has to handle that case.
     pub protective_hits: u16,
     /// Returns inside the warning field, including protective ones.
+    ///
+    /// Carries the same [`ScanVerdict::blind`] exception as `protective_hits`.
     pub warning_hits: u16,
     /// Closest valid return anywhere in the scan, metres. Infinite if there were none.
     ///
@@ -165,6 +172,10 @@ impl ScanVerdict {
     /// A verdict for a robot that cannot see: treated as a protective breach.
     ///
     /// Absence of evidence is not evidence of a clear floor. A blind robot stops.
+    ///
+    /// Deliberately breaks the hit-count invariant every evaluated verdict holds: both
+    /// breach flags are set with both counters at zero, because there is no hit to
+    /// count. The flags say "refuse to move", the counters say "on no evidence".
     #[must_use]
     pub fn blind() -> Self {
         Self {
