@@ -34,12 +34,18 @@ pub struct DockingConfig {
     pub max_protective_m: f32,
     /// Hard ceiling on forward speed while docking, metres per second.
     pub max_linear: f32,
+    /// Hard ceiling on yaw rate while docking, radians per second.
+    ///
+    /// Capping forward speed alone is not enough: the protective field faces forward,
+    /// so a fast yaw while creeping under a shelf sweeps the corners of the base through
+    /// floor the field never covered.
+    pub max_angular: f32,
 }
 
 impl Default for DockingConfig {
     /// Tuned for a 0.35 m half-width base approaching a shelf with a 0.9 m leg span.
     fn default() -> Self {
-        Self { half_width_m: 0.22, max_protective_m: 0.12, max_linear: 0.15 }
+        Self { half_width_m: 0.22, max_protective_m: 0.12, max_linear: 0.15, max_angular: 0.3 }
     }
 }
 
@@ -131,11 +137,12 @@ impl SafetyConfig {
             }
         }
 
-        let non_negative: [(&'static str, f32); 4] = [
+        let non_negative: [(&'static str, f32); 5] = [
             ("reaction_time_s", self.reaction_time_s),
             ("protective_margin_m", self.protective_margin_m),
             ("docking.max_protective_m", self.docking.max_protective_m),
             ("docking.max_linear", self.docking.max_linear),
+            ("docking.max_angular", self.docking.max_angular),
         ];
         for (name, value) in non_negative {
             if !value.is_finite() {
@@ -162,6 +169,9 @@ impl SafetyConfig {
             return Err(ConfigError::DockingFieldNotNarrower);
         }
         if self.docking.max_linear > self.max_linear {
+            return Err(ConfigError::DockingFieldNotNarrower);
+        }
+        if self.docking.max_angular > self.max_angular {
             return Err(ConfigError::DockingFieldNotNarrower);
         }
         Ok(())

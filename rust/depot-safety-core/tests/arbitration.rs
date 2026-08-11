@@ -14,8 +14,8 @@
 mod harness;
 
 use depot_safety_core::{
-    Arbiter, Command, Decision, FieldState, Micros, Mode, ScanError, Tick, Twist, VetoReason,
-    ZoneLimits, MAX_RAYS,
+    Arbiter, Command, ConfigError, Decision, FieldState, Micros, Mode, ScanError, Tick, Twist,
+    VetoReason, ZoneLimits, MAX_RAYS,
 };
 use harness::{config, empty_floor, scan_at, shelf_legs, wall_ahead, PERIOD_US};
 
@@ -265,7 +265,9 @@ fn docking_tolerates_the_shelf_it_is_driving_under_but_still_limits_speed() {
     let cfg = config();
     // Legs 0.35 m off centreline: inside the normal field, outside the docking field.
     let ranges = shelf_legs(0.30, 0.35);
-    let creep = Twist::new(0.6, 0.0);
+    // A yaw request at the vehicle ceiling, so the docking yaw ceiling has to bind too:
+    // the field faces forward, and spinning under a shelf sweeps floor it never covered.
+    let creep = Twist::new(0.6, cfg.max_angular);
 
     let run = |mode: Mode| -> Decision {
         let mut arbiter = Arbiter::new(cfg).unwrap();
@@ -293,8 +295,20 @@ fn docking_tolerates_the_shelf_it_is_driving_under_but_still_limits_speed() {
         "docking speed {} exceeds the ceiling",
         docking.twist.linear
     );
+    assert!(
+        docking.twist.angular.abs() <= cfg.docking.max_angular + 1e-6,
+        "docking yaw {} exceeds the ceiling",
+        docking.twist.angular
+    );
     assert!(docking.extent.protective_len > 0.0, "the field is narrowed, never disabled");
     assert_eq!(docking.veto, VetoReason::DockingLimit, "the docking ceiling is what bound");
+}
+
+#[test]
+fn a_docking_profile_may_not_out_run_the_vehicle_it_docks() {
+    let mut cfg = config();
+    cfg.docking.max_angular = cfg.max_angular + 0.1;
+    assert_eq!(Arbiter::new(cfg).err(), Some(ConfigError::DockingFieldNotNarrower));
 }
 
 #[test]

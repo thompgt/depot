@@ -219,7 +219,7 @@ depot/
 │       │   └── arbiter.rs           Tick → Decision: the single point of authority
 │       └── tests/
 │           ├── harness/mod.rs       synthetic sensor: empty floor, wall, shelf legs
-│           ├── arbitration.rs       behavioural scenarios (13)
+│           ├── arbitration.rs       behavioural scenarios (14)
 │           ├── properties.rs        proptest invariants (8)
 │           ├── latency.rs           the 10 ms budget, asserted (1)
 │           └── no_alloc.rs          counting allocator, zero heap traffic (1)
@@ -273,9 +273,11 @@ amount of arithmetic, then returns a `Decision`.
 
 **Docking** is the interesting special case: the robot is deliberately driving *at* a known
 obstacle, so the normal field would latch a stop on the shelf itself. The response is a
-narrower, shorter field plus a hard speed ceiling — validated at construction to be no wider
-and no faster than the normal profile — never a disabled field. The robot still stops for
-anything closer than the docking field.
+narrower, shorter field plus hard ceilings on *both* forward speed and yaw rate — validated
+at construction to be no wider, no faster and no quicker-turning than the normal profile —
+never a disabled field. The yaw ceiling matters as much as the linear one: the field faces
+forward, so spinning under a shelf sweeps the corners of the base through floor the field
+never covered. The robot still stops for anything closer than the docking field.
 
 ---
 
@@ -298,7 +300,7 @@ is moving eventually *will* be.
 All commands run from `rust/`.
 
 ```bash
-# Everything, optimised: 49 tests (26 unit, 13 behavioural, 8 property,
+# Everything, optimised: 50 tests (26 unit, 14 behavioural, 8 property,
 # 1 latency, 1 allocation guard).
 cargo test --release --all-targets
 

@@ -291,7 +291,7 @@ impl Arbiter {
         }
 
         if tick.mode == Mode::Docking {
-            let docked = target.clamped(self.cfg.docking.max_linear, self.cfg.max_angular);
+            let docked = target.clamped(self.cfg.docking.max_linear, self.cfg.docking.max_angular);
             if docked != target {
                 veto = veto.max(VetoReason::DockingLimit);
                 target = docked;
