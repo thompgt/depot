@@ -249,7 +249,17 @@ impl Arbiter {
             self.last_verdict = ScanVerdict::blind();
         }
 
-        let state = self.field.update(&self.last_verdict, tick.now_us, self.cfg.clear_hold_us);
+        // A latched e-stop is a stop like any other, and it goes through the same state
+        // machine so `Decision.state` can never contradict `Decision.twist`. Forcing
+        // *after* the update discards any release timer the update may have started,
+        // so the hold only begins on the cycle the operator acknowledges, and re-arming
+        // is then governed by the ordinary `clear_hold_us` rather than resuming full
+        // speed on the very next cycle.
+        let mut state = self.field.update(&self.last_verdict, tick.now_us, self.cfg.clear_hold_us);
+        if self.estop_latched {
+            self.field.force_stop();
+            state = self.field.state();
+        }
 
         // ---- Limits, weakest authority first ---------------------------------------
         let mut target = request.clamped(self.cfg.max_linear, self.cfg.max_angular);

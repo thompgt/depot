@@ -218,7 +218,7 @@ depot/
 │       │   └── arbiter.rs           Tick → Decision: the single point of authority
 │       └── tests/
 │           ├── harness/mod.rs       synthetic sensor: empty floor, wall, shelf legs
-│           ├── arbitration.rs       behavioural scenarios (10)
+│           ├── arbitration.rs       behavioural scenarios (11)
 │           ├── properties.rs        proptest invariants (8)
 │           ├── latency.rs           the 10 ms budget, asserted (1)
 │           └── no_alloc.rs          counting allocator, zero heap traffic (1)
@@ -240,7 +240,9 @@ amount of arithmetic, then returns a `Decision`.
 1. **Timestep.** Elapsed time since the last cycle, clamped to 50 ms. A stalled loop must
    not earn the right to a large velocity step.
 2. **E-stop.** An asserted line latches; only an explicit `estop_reset` acknowledgement
-   clears it.
+   clears it. The latch drives the same field state machine as a breach, so the reported
+   state can never contradict the output, and re-arming after an acknowledgement waits
+   out the ordinary `clear_hold_us` release hold rather than resuming instantly.
 3. **Intake.** A non-finite command is discarded (`CommandInvalid`) and the held command
    zeroed — a NaN reaching the motors is a runaway. The watchdog tracks the age of the
    freshest *valid* command, so a stream of NaNs looks like silence, not health.
@@ -295,7 +297,7 @@ is moving eventually *will* be.
 All commands run from `rust/`.
 
 ```bash
-# Everything, optimised: 46 tests (26 unit, 10 behavioural, 8 property,
+# Everything, optimised: 47 tests (26 unit, 11 behavioural, 8 property,
 # 1 latency, 1 allocation guard).
 cargo test --release --all-targets
 

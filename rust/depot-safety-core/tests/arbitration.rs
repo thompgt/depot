@@ -194,6 +194,50 @@ fn the_estop_latches_until_an_operator_acknowledges_it() {
 }
 
 #[test]
+fn an_estop_over_a_clear_floor_still_reads_as_stopped() {
+    let ranges = empty_floor();
+    let cfg = config();
+    let mut arbiter = Arbiter::new(cfg).unwrap();
+    let mut now = 0;
+    let drive = |now| Tick::new(now).with_cmd(Command::new(FULL_SPEED, now));
+
+    // The floor is clear throughout, so nothing but the e-stop can stop the robot.
+    let mut tick = drive(now).with_scan(scan_at(&ranges, now));
+    tick.estop = true;
+    let d = arbiter.step(&tick);
+    assert_eq!(d.twist, Twist::ZERO);
+    assert_eq!(d.state, FieldState::ProtectiveStop, "the state must not contradict the output");
+    assert_eq!(d.veto, VetoReason::EStop);
+    now += PERIOD_US;
+
+    // Acknowledged. Re-arming is governed by the ordinary release hold, not instant.
+    let mut tick = drive(now).with_scan(scan_at(&ranges, now));
+    tick.estop_reset = true;
+    let d = arbiter.step(&tick);
+    assert!(!d.estop_latched);
+    assert_eq!(d.twist, Twist::ZERO, "release must not resume motion on the same cycle");
+    assert_eq!(d.state, FieldState::ProtectiveStop);
+
+    let released_at = now;
+    let mut moving_at = None;
+    for _ in 0..300 {
+        now += PERIOD_US;
+        let d = arbiter.step(&drive(now).with_scan(scan_at(&ranges, now)));
+        if d.twist.linear > 0.0 {
+            moving_at = Some(now);
+            break;
+        }
+    }
+    let moving_at = moving_at.expect("the robot must eventually re-arm");
+    assert!(
+        moving_at - released_at >= cfg.clear_hold_us,
+        "re-armed after {} us, hold is {} us",
+        moving_at - released_at,
+        cfg.clear_hold_us
+    );
+}
+
+#[test]
 fn docking_tolerates_the_shelf_it_is_driving_under_but_still_limits_speed() {
     let cfg = config();
     // Legs 0.35 m off centreline: inside the normal field, outside the docking field.
