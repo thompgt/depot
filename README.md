@@ -83,9 +83,12 @@ test rather than argued in a comment.
 
 **Engineering practice**
 - Multi-job GitHub Actions CI: format, clippy-as-errors, tests, doctests, an optimised
-  budgets job, and a bare-metal cross-compilation job.
-- Cargo workspace with shared lints and package metadata; `rustfmt.toml` tuned to the
-  crate's idiom.
+  budgets job, a supply-chain job (`cargo deny` over advisories, licences and sources), an
+  MSRV job on a pinned 1.75 toolchain, and a bare-metal cross-compilation job — with
+  least-privilege token permissions and one cancel-in-progress run per ref.
+- Cargo workspace with shared lints, package metadata and a central dependency table, so
+  the crates arriving in later phases cannot drift onto different versions of the library
+  that computes stopping distances; `rustfmt.toml` tuned to the crate's idiom.
 - `.gitattributes` normalising line endings to LF because the eventual simulation stack
   runs in Linux containers and a CRLF in a launch script reads as a missing binary.
 
@@ -224,8 +227,10 @@ depot/
 │           ├── properties.rs        proptest invariants (9)
 │           ├── latency.rs           the 10 ms budget, asserted (1)
 │           └── no_alloc.rs          counting allocator, zero heap traffic (1)
+│   └── deny.toml                    supply-chain policy: advisories, licences, sources
 ├── docs/WORKPLAN.md                 13 phases, each with an explicit done-when
-└── .github/workflows/rust.yml       test · budgets · no_std jobs
+├── .github/dependabot.yml           weekly cargo and Actions updates
+└── .github/workflows/rust.yml       test · budgets · deny · msrv · no_std jobs
 ```
 
 `cpp/`, `java/`, `python/`, `sim/` and `infra/` appear in the workplan and in
