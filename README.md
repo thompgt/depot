@@ -354,8 +354,10 @@ never reads a clock, which is what makes a recorded run replayable bit-for-bit.
 
 ### CI
 
-[`.github/workflows/rust.yml`](.github/workflows/rust.yml) runs on any push touching
-`rust/**`, in four jobs: **test** (fmt, clippy with `-D warnings`, tests, doctests),
+[`.github/workflows/rust.yml`](.github/workflows/rust.yml) runs on every push and pull
+request — deliberately with no `paths:` filter, so a green tick means the same thing on a
+docs-only change as on a change to the arbiter — with read-only token permissions and one
+cancel-in-progress run per ref. Four jobs: **test** (fmt, clippy with `-D warnings`, tests, doctests),
 **budgets** (latency and allocation guard, release only — both are meaningless against an
 unoptimised build), **msrv** (the declared 1.75 checked on a pinned 1.75 toolchain), and
 **no_std** (the `thumbv7em-none-eabihf` cross-compile).
