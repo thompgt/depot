@@ -10,9 +10,12 @@ use crate::types::Scan;
 
 /// Maximum rays the core will consider in one scan.
 ///
-/// Sized for a 270° sensor at 0.25° resolution. Scans longer than this are evaluated
-/// up to this many rays and reported as truncated, which the node binding treats as a
-/// configuration error rather than silently ignoring the tail.
+/// Sized for a 270° sensor at 0.25° resolution. A scan with more rays than this is
+/// **rejected outright** with [`ScanError::TooManyRays`] — not truncated. The arbiter
+/// treats the rejection as a blind cycle and stops the robot, because a sensor
+/// publishing an unexpected ray count is a misconfiguration, and evaluating the first
+/// 1081 rays of it would mean deciding the floor is clear on the strength of a scan
+/// nobody understands.
 pub const MAX_RAYS: usize = 1081;
 
 /// Why a scan could not be used.
